@@ -7,8 +7,6 @@ import { getUserId, clearUserId } from "../utils/generator";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom"; // important for redirect
 
-
-
 const Both: React.FC = () => {
   const socket = useAtomValue(socketAtom);
   const { ROOMID } = useParams<{ ROOMID: string }>();
@@ -19,19 +17,8 @@ const Both: React.FC = () => {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [uploadComplete, setUploadComplete] = useState<boolean>(false);
-  const [receiveProgress,setReceiveProgress]=useState<number>(0);
-  // const peer = useRef<RTCPeerConnection>(
-  //   new RTCPeerConnection({
-  //     iceServers: [
-  //       { urls: "stun:stun.l.google.com:19302" },
-  //       {
-  //         urls: "turn:64.227.129.105:3478",
-  //         username: "sunil",
-  //         credential: "yourpassword123",
-  //       },
-  //     ],
-  //   })
-  // );
+  const [receiveProgress, setReceiveProgress] = useState<number>(0);
+
   const peer = useRef<RTCPeerConnection | null>(null);
 
   const dataChannel = useRef<RTCDataChannel | null>(null);
@@ -57,16 +44,15 @@ const Both: React.FC = () => {
   const selectedFile = useRef<HTMLInputElement | null>(null);
 
   const myId = getUserId();
-  // console.log("myId", myId);
 
   useEffect(() => {
     const pc = new RTCPeerConnection({
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
         {
-          urls: "turn:64.227.129.105:3478",
-          username: "sunil",
-          credential: "yourpassword123",
+          urls: import.meta.env.VITE_TURNURL,
+          username: import.meta.env.VITE_TURNUSERNAME,
+          credential: import.meta.env.VITE_TURNPASSWORD,
         },
       ],
     });
@@ -78,7 +64,7 @@ const Both: React.FC = () => {
       dataChannel.current = null;
       peer.current = null;
     };
-  }, []);
+  }, []); //initiliaze WEBRTC
 
   useEffect(() => {
     if (!socket || !ROOMID) return;
@@ -156,7 +142,7 @@ const Both: React.FC = () => {
         case "transfer-start":
           toast(`Someone has started sharing a file...`, {
             icon: "📤",
-            duration: 5000, // 5 seconds
+            duration: 5000,
           });
           break;
 
@@ -167,7 +153,7 @@ const Both: React.FC = () => {
           });
           reciveSizeRef.current = 0;
           reciveArry.current = [];
-          setReceiveProgress(0)
+          setReceiveProgress(0);
 
           break;
       }
@@ -208,7 +194,7 @@ const Both: React.FC = () => {
 
     peer.current.ondatachannel = (event) => {
       const receiveChannel = event.channel;
-      let offset=0;
+      let offset = 0;
       receiveChannel.binaryType = "arraybuffer";
 
       receiveChannel.onmessage = async (event) => {
@@ -220,8 +206,10 @@ const Both: React.FC = () => {
         }
 
         reciveSizeRef.current = reciveSizeRef.current + buf.byteLength;
-        offset+=buf.byteLength;
-        setReceiveProgress(Math.floor(( offset/ fileDetails.current!.size) * 100));
+        offset += buf.byteLength;
+        setReceiveProgress(
+          Math.floor((offset / fileDetails.current!.size) * 100)
+        );
 
         console.log("reciveSizeRef", reciveSizeRef.current);
 
@@ -238,7 +226,7 @@ const Both: React.FC = () => {
 
           reciveSizeRef.current = 0;
           reciveArry.current = [];
-          setReceiveProgress(0)
+          setReceiveProgress(0);
         }
       };
 
@@ -254,63 +242,6 @@ const Both: React.FC = () => {
       };
     };
 
-    // socket.onmessage = async (event: MessageEvent) => {
-    //   const message = JSON.parse(event.data);
-
-    //   if (message.type === "ready") {
-    //     console.log("Peer is ready to connect:", message.peerId);
-    //     setPeerId(message.peerId);
-    //   } else if (message.type === "offer") {
-    //     peer.current!.onicecandidate = (event) => {
-    //       if (event.candidate) {
-    //         socket.send(
-    //           JSON.stringify({
-    //             roomId: ROOMID,
-    //             type: "ice-candidate",
-    //             candidate: event.candidate,
-    //             to: message.to,
-    //           })
-    //         );
-    //       }
-    //     };
-
-    //     await peer.current!.setRemoteDescription(message.offer);
-    //     const answer = await peer.current!.createAnswer();
-    //     await peer.current!.setLocalDescription(answer);
-
-    //     console.log("Sending answer to", message.to);
-    //     socket.send(
-    //       JSON.stringify({
-    //         roomId: ROOMID,
-    //         type: "answer",
-    //         answer,
-    //         to: message.to,
-    //       })
-    //     );
-    //   } else if (message.type === "answer") {
-    //     console.log("Received answer from", message.to);
-    //     await peer.current!.setRemoteDescription(message.answer);
-
-    //     // Process any queued ICE candidates
-    //     iceQueue.current.forEach(async (candidate) => {
-    //       await peer.current!.addIceCandidate(new RTCIceCandidate(candidate));
-    //     });
-    //     iceQueue.current = [];
-    //   } else if (message.type === "ice-candidate") {
-    //     console.log("Received ICE candidate from", message.to);
-
-    //     if (peer.current!.remoteDescription) {
-    //       // console.log("add ice candidate to peer");
-    //       await peer.current!.addIceCandidate(message.candidate);
-    //     } else {
-    //       // console.log("add to queue");
-    //       iceQueue.current.push(message.candidate);
-    //     }
-    //   } else if (message.type === "file-details") {
-    //     fileDetails.current = message.details;
-    //     // console.log("File details:", fileDetails.current);
-    //   }
-    // };
   }, [socket, ROOMID]);
 
   const setupDataChannel = () => {
@@ -701,44 +632,44 @@ const Both: React.FC = () => {
         >
           {/* Heading */}
           <div className="flex items-center justify-between mb-4">
-  <h2 className="text-xl font-semibold text-zinc-800 dark:text-zinc-100">
-    Received Files
-  </h2>
+            <h2 className="text-xl font-semibold text-zinc-800 dark:text-zinc-100">
+              Received Files
+            </h2>
 
-  {
-    
- 
-  <div className="relative w-10 h-10">
-    <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 36 36">
-      <circle
-        className="text-gray-300"
-        strokeWidth="3"
-        stroke="currentColor"
-        fill="transparent"
-        r="16"
-        cx="18"
-        cy="18"
-      />
-      <circle
-        className="text-purple-500"
-        strokeWidth="3"
-        strokeDasharray="100"
-        strokeDashoffset={100 - receiveProgress}
-        strokeLinecap="round"
-        stroke="currentColor"
-        fill="transparent"
-        r="16"
-        cx="18"
-        cy="18"
-      />
-    </svg>
-    <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-zinc-800 dark:text-white">
-      {receiveProgress}%
-    </div>
-  </div>
- }
-</div>
-
+            {
+              <div className="relative w-10 h-10">
+                <svg
+                  className="w-full h-full rotate-[-90deg]"
+                  viewBox="0 0 36 36"
+                >
+                  <circle
+                    className="text-gray-300"
+                    strokeWidth="3"
+                    stroke="currentColor"
+                    fill="transparent"
+                    r="16"
+                    cx="18"
+                    cy="18"
+                  />
+                  <circle
+                    className="text-purple-500"
+                    strokeWidth="3"
+                    strokeDasharray="100"
+                    strokeDashoffset={100 - receiveProgress}
+                    strokeLinecap="round"
+                    stroke="currentColor"
+                    fill="transparent"
+                    r="16"
+                    cx="18"
+                    cy="18"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-zinc-800 dark:text-white">
+                  {receiveProgress}%
+                </div>
+              </div>
+            }
+          </div>
 
           {reciveFile.map((item, index) => {
             return (
